@@ -1,15 +1,46 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 import mysql.connector
+from mysql.connector import pooling
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+# Create a connection pool
+dbconfig = {
+    "host": os.getenv("MYSQL_HOST"),
+    "user": os.getenv("MYSQL_USERNAME"),
+    "database": os.getenv("MYSQL_DATABASE"),
+}
+cnxpool = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **dbconfig)
 
 def get_db_connection():
-    cnx = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        database="mydb"
-    )
-    return  cnx
+    return cnxpool.get_connection()
 
 app = FastAPI()
+
+class ingredient(BaseModel):
+    name : str
+    unit : str
+    price_per_unit : float
+    created_at : str
+
+@app.post('/ingredients')
+def create_ingredient(ingredient: ingredient):
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    query = '''
+    insert into ingredients (name, unit, price_per_unit, created_at)
+    values (%s, %s, %s, %s)
+    '''
+    cursor.execute(query, (ingredient.name, ingredient.unit, 
+                           ingredient.price_per_unit, ingredient.created_at))
+    cnx.commit()
+    ingredient_id = cursor.lastrowid
+    cursor.close()
+    cnx.close()
+    return {"id": ingredient_id}
 
 @app.get('/ingredients')
 def get_ingredients():
@@ -32,7 +63,6 @@ def get_ingredients():
         })
 
     return ingredients
-    
 
 @app.get('/')
 def read_root():
