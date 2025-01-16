@@ -11,15 +11,28 @@ def get_db_connection():
 
 app = FastAPI()
 
-@app.get('/users')
-def read_users():
+@app.get('/ingredients')
+def get_ingredients():
     cnx = get_db_connection()
-    cursor = cnx.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users")
-    users = cursor.fetchall()
+    cursor = cnx.cursor()
+    query = "select * from ingredients"
+    cursor.execute(query)
+    rows = cursor.fetchall()
     cursor.close()
     cnx.close()
-    return {"users": users}
+    
+    ingredients = []
+    for row in rows:
+        ingredients.append({
+            "id": row[0],
+            "name": row[1],
+            "unit": row[2],
+            "price_per_unit": row[3],
+            "created_at": row[4],
+        })
+
+    return ingredients
+    
 
 @app.get('/')
 def read_root():
