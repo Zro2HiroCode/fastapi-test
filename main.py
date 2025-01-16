@@ -11,6 +11,16 @@ def get_db_connection():
 
 app = FastAPI()
 
+@app.get('/users')
+def read_users():
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users")
+    users = cursor.fetchall()
+    cursor.close()
+    cnx.close()
+    return {"users": users}
+
 @app.get('/')
 def read_root():
     return {'Message': 'Hello World'}
